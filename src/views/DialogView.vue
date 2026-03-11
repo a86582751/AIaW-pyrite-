@@ -1426,8 +1426,14 @@ async function autoExtractArtifact() {
 
 const uiStateStore = useUiStateStore()
 const scrollTops = uiStateStore.dialogScrollTops
+
+// 节流滚动处理（100ms），优化性能
+const throttledOnScroll = throttle((scrollTop: number) => {
+  scrollTops[props.id] = scrollTop
+}, 100)
+
 function onScroll(ev) {
-  scrollTops[props.id] = ev.target.scrollTop
+  throttledOnScroll(ev.target.scrollTop)
 }
 watch(() => liveData.value.dialog?.id, id => {
   if (!id) return
