@@ -5,6 +5,8 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+  release:
+    types: [published]
   workflow_dispatch:  # 允许手动触发
 
 jobs:
@@ -51,3 +53,26 @@ jobs:
           name: dist-pwa
           path: dist/pwa/
           retention-days: 7
+
+      # 如果是release，上传到release
+      - name: Upload to Release
+        if: github.event_name == 'release'
+        uses: "actions/github-script@v6"
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // 创建zip文件
+            const { execSync } = require('child_process');
+            execSync('cd dist/pwa && zip -r ../../aiaw-pwa.zip .');
+            
+            // 上传到release
+            await github.rest.repos.uploadReleaseAsset({
+              name: 'AIaW_PWA_${{ github.ref_name }}.zip',
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ github.event.release.id }},
+              data: fs.readFileSync('./aiaw-pwa.zip')
+            });
