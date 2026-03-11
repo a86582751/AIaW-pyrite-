@@ -146,26 +146,27 @@
         bg-sur
         of-y-auto
         py-4
-        ref="scrollContainer"
+        ref="virtualScrollContainer"
         pos-relative
         :class="{ 'rd-r-lg': rightDrawerAbove }"
-        @scroll="onScroll"
+        @scroll="onVirtualScrollHandler"
       >
         <template
-          v-for="(i, index) in chain"
+          v-for="(i, idx) in visibleChain"
           :key="i"
         >
           <message-item
             class="message-item"
             v-if="messageMap[i] && i !== '$root'"
-            :model-value="dialog.msgRoute[index - 1] + 1"
+            :data-message-id="i"
+            :model-value="dialog.msgRoute[startIndex + idx - 1] + 1"
             :message="messageMap[i]"
-            :child-num="dialog.msgTree[chain[index - 1]].length"
+            :child-num="dialog.msgTree[visibleChain[idx - 1]]?.length"
             :scroll-container
-            @update:model-value="switchChain(index - 1, $event - 1)"
-            @edit="edit(index)"
-            @regenerate="regenerate(index)"
-            @delete="deleteBranch(index)"
+            @update:model-value="switchChain(startIndex + idx - 1, $event - 1)"
+            @edit="edit(startIndex + idx)"
+            @regenerate="regenerate(startIndex + idx)"
+            @delete="deleteBranch(startIndex + idx)"
             @quote="quote"
             @extract-artifact="extractArtifact(messageMap[i], ...$event)"
             @rendered="messageMap[i].generatingSession && lockBottom()"
@@ -442,6 +443,7 @@ import ModelItem from 'src/components/ModelItem.vue'
 import ParseFilesDialog from 'src/components/ParseFilesDialog.vue'
 import MessageFile from 'src/components/MessageFile.vue'
 import { dialogOptions, InputTypes, models } from 'src/utils/values'
+import { useVirtualScroll } from 'src/utils/virtual-scroll'
 import { useUserDataStore } from 'src/stores/user-data'
 import ErrorNotFound from 'src/pages/ErrorNotFound.vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -498,6 +500,15 @@ provide('dialog', dialog)
 
 const chain = computed<string[]>(() => liveData.value.dialog ? getChain('$root', liveData.value.dialog.msgRoute)[0] : [])
 const historyChain = ref<string[]>([])
+
+// 虚拟滚动 - 只渲染可见区域的消息，优化性能
+const {
+  visibleChain,
+  startIndex,
+  containerRef: virtualScrollContainer,
+  onVirtualScroll
+} = useVirtualScroll(chain)
+
 function switchChain(index, value) {
   const route = [...dialog.value.msgRoute.slice(0, index), value]
   updateChain(route)
@@ -1238,7 +1249,8 @@ function onEnter(ev) {
 
 const showVars = ref(true)
 
-const scrollContainer = ref<HTMLElement>()
+// scrollContainer 现在指向虚拟滚动容器
+const scrollContainer = virtualScrollContainer
 function getEls() {
   const container = scrollContainer.value
   const items: HTMLElement[] = Array.from(document.querySelectorAll('.message-item'))
@@ -1432,9 +1444,14 @@ const throttledOnScroll = throttle((scrollTop: number) => {
   scrollTops[props.id] = scrollTop
 }, 100)
 
-function onScroll(ev) {
-  throttledOnScroll(ev.target.scrollTop)
+// 虚拟滚动和滚动状态保存
+function onVirtualScrollHandler() {
+  if (virtualScrollContainer.value) {
+    throttledOnScroll(virtualScrollContainer.value.scrollTop)
+  }
+  onVirtualScroll()
 }
+
 watch(() => liveData.value.dialog?.id, id => {
   if (!id) return
   nextTick(() => {
