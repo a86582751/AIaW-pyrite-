@@ -44,20 +44,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
         
-      - name: Build PWA
+      - name: Build
         run: pnpm build
-        
-      - name: List build output
-        run: |
-          echo "=== Build output ==="
-          ls -la dist/ || echo "No dist directory"
-          ls -la dist/pwa/ || echo "No dist/pwa directory"
-          ls -la dist/spa/ || echo "No dist/spa directory"
         
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist-pwa
-          path: dist/pwa/
-          if-no-files-found: warn
+          name: aiaw-dist
+          path: dist/spa/
           retention-days: 7
