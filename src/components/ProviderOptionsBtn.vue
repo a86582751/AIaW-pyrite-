@@ -51,7 +51,7 @@ interface Rule {
 const rules: Rule[] = [{
   match: (provider: string, model: string) =>
     provider.startsWith('openai.responses') &&
-    (model.startsWith('o3') || model.startsWith('o4') || model.startsWith('gpt-5') || model === 'o1'),
+    (model.startsWith('o3') || model.startsWith('o4') || model.startsWith('gpt-5.1') || model.startsWith('gpt-5-') || model === 'o1'),
   options: {},
   default: {},
   exec: () => ({
@@ -63,7 +63,10 @@ const rules: Rule[] = [{
     tools: {}
   })
 }, {
-  match: (provider: string) => provider.startsWith('openai.responses'),
+  match: (provider: string, model: string) =>
+    provider.startsWith('openai.responses') &&
+    !model.startsWith('gpt-5.4') &&
+    !model.startsWith('gpt-5.2'),
   options: {
     webSearch: Optional(TBoolean({ title: t('providerOptionsBtn.webSearch') })),
     codeExecution: Optional(TBoolean({ title: t('providerOptionsBtn.codeExecution') })),
@@ -113,7 +116,10 @@ const rules: Rule[] = [{
     }
   }
 }, {
-  match: (provider: string, model: string) => provider.startsWith('google.') && /^gemini-2\.[05]/.test(model),
+  // Gemini 2.x 和 3.x 系列 - 支持联网搜索、代码执行、思考模式
+  match: (provider: string, model: string) =>
+    provider.startsWith('google.') &&
+    (/^gemini-2\.[05]/.test(model) || /^gemini-3/.test(model) || /^gemini-3\.[01]/.test(model)),
   options: {
     webSearch: Optional(TBoolean({ title: t('providerOptionsBtn.webSearch') })),
     codeExecution: Optional(TBoolean({ title: t('providerOptionsBtn.codeExecution') })),
