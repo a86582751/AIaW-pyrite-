@@ -53,3 +53,17 @@ jobs:
           name: aiaw-dist
           path: dist/spa/
           retention-days: 7
+
+      # Release时上传zip
+      - name: Create ZIP for Release
+        if: github.event_name == 'release'
+        run: |
+          cd dist/spa
+          zip -r ../../aiaw-pwa.zip .
+          
+      - name: Upload Release Asset
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: aiaw-pwa.zip
+          fail_on_unmatched_files: true
